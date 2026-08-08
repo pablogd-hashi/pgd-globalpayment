@@ -1,0 +1,90 @@
+version: "3"
+
+silent: true
+
+vars:
+  UI_PORT: 8233
+  DEMO_DIR: .demo
+
+tasks:
+  start:
+    desc: Ensure the local Temporal environment (server + Web UI + worker) is running.
+    cmds:
+      - mkdir -p {{.DEMO_DIR}}
+      - task: start-server
+      - task: start-worker
+      - echo "Temporal Web is at http://localhost:{{.UI_PORT}}"
+
+  start-server:
+    desc: Start the local Temporal dev server (includes Temporal Web) if not already up.
+    status:
+      - curl -s -o /dev/null http://localhost:{{.UI_PORT}}
+    cmds:
+      - mkdir -p {{.DEMO_DIR}}
+      - nohup temporal server start-dev --db-filename {{.DEMO_DIR}}/temporal.db --ui-port {{.UI_PORT}} --log-level warn > {{.DEMO_DIR}}/temporal.log 2>&1 &
+      - sleep 4
+      - echo "Temporal server + Web UI started."
+
+  start-worker:
+    desc: Start the Workflow/Activity worker if not already running.
+    status:
+      - pgrep -f "go run \./worker" >/dev/null 2>&1
+    cmds:
+      - mkdir -p {{.DEMO_DIR}}
+      - nohup go run ./worker > {{.DEMO_DIR}}/worker.log 2>&1 &
+      - sleep 2
+      - echo "Worker started."
+
+  reload-worker:
+    desc: Restart the worker so it runs the current workflow.go/activity.go source.
+    cmds:
+      - pkill -f "go run \./worker" 2>/dev/null || true
+      - pkill -f "go-build.*/exe/worker$" 2>/dev/null || true
+      - sleep 1
+      - task: start-worker
+
+  stop:
+    desc: Stop the worker and the local Temporal dev server.
+    cmds:
+      - pkill -f "go run \./worker" 2>/dev/null || true
+      - pkill -f "go-build.*/exe/worker$" 2>/dev/null || true
+      - pkill -f "temporal server start-dev" 2>/dev/null || true
+      - echo "Stopped worker and Temporal dev server."
+
+  demo-invalid:
+    desc: Start the prepared invalid transfer (amount <= 0) used in the live exercise.
+    cmds:
+      - task: reload-worker
+      - go run ./start -id=demo-invalid-transfer -source=85-150 -target=43-812 -amount=-25 -ref=demo-invalid
+      - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID demo-invalid-transfer"'
+
+  demo-valid:
+    desc: Start a valid transfer to show the unaffected happy path.
+    cmds:
+      - task: reload-worker
+      - go run ./start -id=demo-valid-transfer -source=85-150 -target=43-812 -amount=250 -ref=demo-valid
+      - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID demo-valid-transfer"'
+
+  verify:
+    desc: Run the focused automated tests that prove the business behavior.
+    cmds:
+      - go vet ./...
+      - go test ./... -v
+
+  reset:
+    desc: Restore the deterministic learner starting state (discard live edits, restart worker).
+    cmds:
+      - git checkout -- .
+      - git clean -fd -- . ":(exclude){{.DEMO_DIR}}"
+      - task: reload-worker
+      - echo "Repository and worker restored to the starting state."
+
+  preflight:
+    desc: Verify the whole demo environment end to end before the session.
+    cmds:
+      - go build ./...
+      - task: start
+      - task: verify
+      - task: demo-invalid
+      - task: demo-valid
+      - 'echo "Preflight OK -- Temporal Web at http://localhost:{{.UI_PORT}}"'

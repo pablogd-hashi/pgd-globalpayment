@@ -16,3 +16,6 @@
 
 # IDE dirs
 .idea/
+
+# Local demo environment state (Temporal dev server db, logs, worker pid)
+.demo/
