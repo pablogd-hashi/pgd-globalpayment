@@ -1,0 +1,20 @@
+---
+description: Where deterministic money-movement guards belong in this repo
+globs:
+  - workflow.go
+  - activity.go
+---
+
+When deciding where a guard belongs, use this boundary:
+
+A deterministic check that must prevent money movement from starting belongs
+in the Workflow function, before the first `workflow.ExecuteActivity` call —
+not inside an Activity, and not in the client that starts the Workflow.
+
+Activities perform side effects. Once scheduled, their execution is recorded
+in Workflow history; a guard inside an Activity cannot prevent its own
+execution. The starter in `start/main.go` can be bypassed by other callers
+and a rejection there leaves no Temporal audit trail.
+
+Derive the specific check from the requirement and existing code. This rule
+constrains placement only.
