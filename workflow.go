@@ -24,7 +24,7 @@ func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
 	// scheduled. This check is deterministic and needs no external call, so
 	// it belongs in the Workflow rather than in an Activity: it stops the
 	// transfer before Withdraw/Deposit ever run, instead of after. See
-	// AGENTS.md for the general convention this follows.
+	// .cursor/rules/guard-placement.mdc for where this class of guard belongs.
 	if input.Amount <= 0 {
 		return "", &InvalidAmountError{}
 	}
