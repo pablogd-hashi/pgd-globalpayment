@@ -8,8 +8,26 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
+// InvalidAmountError is returned when a transfer is requested with an amount
+// that is not strictly greater than zero. It is a Workflow-level input guard,
+// not a banking error, so it lives here rather than in banking-client.go.
+type InvalidAmountError struct{}
+
+func (m *InvalidAmountError) Error() string {
+	return "Transfer amount must be greater than zero"
+}
+
 // @@@SNIPSTART money-transfer-project-template-go-workflow
 func MoneyTransfer(ctx workflow.Context, input PaymentDetails) (string, error) {
+
+	// Reject invalid transfer amounts before any money-movement Activity is
+	// scheduled. This check is deterministic and needs no external call, so
+	// it belongs in the Workflow rather than in an Activity: it stops the
+	// transfer before Withdraw/Deposit ever run, instead of after. See
+	// AGENTS.md for the general convention this follows.
+	if input.Amount <= 0 {
+		return "", &InvalidAmountError{}
+	}
 
 	// RetryPolicy specifies how to automatically handle retries if an Activity fails.
 	retrypolicy := &temporal.RetryPolicy{

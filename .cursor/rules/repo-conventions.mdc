@@ -1,0 +1,10 @@
+---
+description: Point the agent at durable repository conventions before proposing an architectural decision
+alwaysApply: true
+---
+
+Before proposing where a change belongs in this repository, read `AGENTS.md`
+at the repository root. It records conventions this codebase has already
+settled (for example, where different classes of validation belong) so that
+work does not re-derive them from scratch. If a task discovers a new durable
+convention, add it to `AGENTS.md` rather than only stating it in chat.
