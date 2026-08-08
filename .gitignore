@@ -19,3 +19,9 @@
 
 # Local demo environment state (Temporal dev server db, logs, worker pid)
 .demo/
+
+# Private interview/presentation prep material (never push to remote:
+# rehearsal notes, deck, planning docs, challenge prompt). Interviewers
+# must not see this in the repo. Present with this folder open locally,
+# but keep it out of every commit.
+_prep/
