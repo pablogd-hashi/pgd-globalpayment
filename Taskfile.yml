@@ -51,19 +51,19 @@ tasks:
       - pkill -f "temporal server start-dev" 2>/dev/null || true
       - echo "Stopped worker and Temporal dev server."
 
-  demo-invalid:
-    desc: Start the prepared invalid transfer (amount <= 0) used in the live exercise.
+  repro:
+    desc: "Reproduce PAY-1183: transfer accepted with a negative amount."
     cmds:
       - task: reload-worker
-      - go run ./start -id=demo-invalid-transfer -source=85-150 -target=43-812 -amount=-25 -ref=demo-invalid
-      - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID demo-invalid-transfer"'
+      - go run ./start -id=transfer-PAY-1183 -source=85-150 -target=43-812 -amount=-25 -ref=REF-2026-0806-0047
+      - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID transfer-PAY-1183"'
 
-  demo-valid:
-    desc: Start a valid transfer to show the unaffected happy path.
+  transfer:
+    desc: Run an ordinary transfer.
     cmds:
       - task: reload-worker
-      - go run ./start -id=demo-valid-transfer -source=85-150 -target=43-812 -amount=250 -ref=demo-valid
-      - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID demo-valid-transfer"'
+      - go run ./start -id=transfer-2026-0806-0082 -source=85-150 -target=43-812 -amount=250 -ref=REF-2026-0806-0082
+      - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID transfer-2026-0806-0082"'
 
   verify:
     desc: Run the focused automated tests that prove the business behavior.
@@ -85,6 +85,6 @@ tasks:
       - go build ./...
       - task: start
       - task: verify
-      - task: demo-invalid
-      - task: demo-valid
+      - task: repro
+      - task: transfer
       - 'echo "Preflight OK -- Temporal Web at http://localhost:{{.UI_PORT}}"'

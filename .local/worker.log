@@ -1,0 +1,14 @@
+2026/08/08 22:32:34 INFO  No logger configured for temporal client. Created default one.
+2026/08/08 22:32:34 INFO  Started Worker Namespace default TaskQueue TRANSFER_MONEY_TASK_QUEUE WorkerID 44980@Pablos-MacBook-Air.local@
+2026/08/08 22:34:05 Depositing $-25 into account 43-812.
+
+2026/08/08 22:41:53 Withdrawing $-25 from account 85-150.
+
+2026/08/08 22:41:53 Depositing $-25 into account 43-812.
+
+transfer-PAY-1183 RunID 019fe315-332b-7b4e-a9ca-3ddf72fc83bf Attempt 1 ActivityID 5 ActivityType Withdraw
+2026/08/08 22:34:05 DEBUG ExecuteActivity Namespace default TaskQueue TRANSFER_MONEY_TASK_QUEUE WorkerID 32477@Pablos-MacBook-Air.local@ WorkflowType MoneyTransfer WorkflowID transfer-PAY-1183 RunID 019fe315-332b-7b4e-a9ca-3ddf72fc83bf Attempt 1 ActivityID 11 ActivityType Deposit
+2026/08/08 22:41:53 DEBUG ExecuteActivity Namespace default TaskQueue TRANSFER_MONEY_TASK_QUEUE WorkerID 32477@Pablos-MacBook-Air.local@ WorkflowType MoneyTransfer WorkflowID transfer-PAY-1183 RunID 019fe31c-576d-71a1-9646-4516961e27b1 Attempt 1 ActivityID 5 ActivityType Withdraw
+2026/08/08 22:41:53 DEBUG ExecuteActivity Namespace default TaskQueue TRANSFER_MONEY_TASK_QUEUE WorkerID 32477@Pablos-MacBook-Air.local@ WorkflowType MoneyTransfer WorkflowID transfer-PAY-1183 RunID 019fe31c-576d-71a1-9646-4516961e27b1 Attempt 1 ActivityID 11 ActivityType Deposit
+2026/08/09 15:12:02 Depositing $-25 into account 43-812.
+

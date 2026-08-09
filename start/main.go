@@ -13,7 +13,7 @@ import (
 // @@@SNIPSTART money-transfer-project-template-go-start-workflow
 func main() {
 	// Flags let the demo start the same Workflow with different inputs
-	// (e.g. `task demo-invalid`, `task demo-valid`) without editing code.
+	// (e.g. `task repro`, `task transfer`) without editing code.
 	workflowID := flag.String("id", "pay-invoice-701", "Workflow ID")
 	sourceAccount := flag.String("source", "85-150", "Source account number")
 	targetAccount := flag.String("target", "43-812", "Target account number")

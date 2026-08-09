@@ -1,0 +1,12 @@
+---
+description: Keep changes small and single-purpose in this repository
+globs:
+  - "*"
+---
+
+Keep diffs minimal. Change only what the current task requires; do not
+restructure the repository, rename unrelated symbols, or tidy adjacent code
+in the same change set.
+
+One logical change per change set. If you discover a second concern, finish
+the first change, then handle the second separately so review stays focused.
