@@ -43,13 +43,27 @@ tasks:
       - sleep 1
       - task: start-worker
 
+  clean-temporal:
+    desc: Remove local Temporal dev-server state so the next start has no workflow history.
+    internal: true
+    cmds:
+      - rm -f {{.DEMO_DIR}}/temporal.db {{.DEMO_DIR}}/temporal.db-shm {{.DEMO_DIR}}/temporal.db-wal
+      - echo "Temporal workflow history cleared."
+
   stop:
     desc: Stop the worker and the local Temporal dev server.
     cmds:
       - pkill -f "go run \./worker" 2>/dev/null || true
       - pkill -f "go-build.*/exe/worker$" 2>/dev/null || true
       - pkill -f "temporal server start-dev" 2>/dev/null || true
+      - task: clean-temporal
       - echo "Stopped worker and Temporal dev server."
+
+  restart:
+    desc: Stop the lab, wipe Temporal workflow history, and start fresh.
+    cmds:
+      - task: stop
+      - task: start
 
   repro:
     desc: "Reproduce PAY-1183: transfer accepted with a negative amount."
@@ -71,19 +85,11 @@ tasks:
       - go vet ./...
       - go test ./... -v
 
-  reset:
-    desc: Restore the deterministic learner starting state (discard live edits, restart worker).
-    cmds:
-      - git checkout -- .
-      - git clean -fd -- . ":(exclude){{.DEMO_DIR}}"
-      - task: reload-worker
-      - echo "Repository and worker restored to the starting state."
-
   preflight:
     desc: Verify the whole demo environment end to end before the session.
     cmds:
       - go build ./...
-      - task: start
+      - task: restart
       - task: verify
       - task: repro
       - task: transfer
