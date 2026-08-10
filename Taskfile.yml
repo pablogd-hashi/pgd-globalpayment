@@ -18,12 +18,21 @@ tasks:
   start-server:
     desc: Start the local Temporal dev server (includes Temporal Web) if not already up.
     status:
-      - curl -s -o /dev/null http://localhost:{{.UI_PORT}}
+      - curl -sf -o /dev/null http://localhost:{{.UI_PORT}}
     cmds:
       - mkdir -p {{.DEMO_DIR}}
       - nohup temporal server start-dev --db-filename {{.DEMO_DIR}}/temporal.db --ui-port {{.UI_PORT}} --log-level warn > {{.DEMO_DIR}}/temporal.log 2>&1 &
-      - sleep 4
-      - echo "Temporal server + Web UI started."
+      - |
+        for i in $(seq 1 30); do
+          if curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
+            echo "Temporal server + Web UI started."
+            exit 0
+          fi
+          sleep 0.5
+        done
+        echo "Temporal failed to become ready on :{{.UI_PORT}}. Log:"
+        tail -n 50 {{.DEMO_DIR}}/temporal.log || true
+        exit 1
 
   start-worker:
     desc: Start the Workflow/Activity worker if not already running.
@@ -33,8 +42,17 @@ tasks:
     cmds:
       - mkdir -p {{.DEMO_DIR}}
       - nohup go run ./worker > {{.DEMO_DIR}}/worker.log 2>&1 &
-      - sleep 2
-      - echo "Worker started."
+      - |
+        for i in $(seq 1 20); do
+          if pgrep -f "(go run \./worker|go-build.*/worker$)" >/dev/null 2>&1; then
+            echo "Worker started."
+            exit 0
+          fi
+          sleep 0.5
+        done
+        echo "Worker failed to start. Log:"
+        tail -n 50 {{.DEMO_DIR}}/worker.log || true
+        exit 1
 
   reload-worker:
     desc: Restart the worker so it runs the current workflow.go/activity.go source.
@@ -58,6 +76,21 @@ tasks:
       - pkill -f "go run \./worker" 2>/dev/null || true
       - pkill -f "go-build.*/worker$" 2>/dev/null || true
       - pkill -f "temporal server start-dev" 2>/dev/null || true
+      # Wait until the UI port is actually down so start-server does not skip as "already up".
+      - |
+        for i in $(seq 1 30); do
+          if curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
+            pkill -f "temporal server start-dev" 2>/dev/null || true
+            sleep 0.5
+          else
+            break
+          fi
+        done
+        if curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
+          echo "stop: Temporal UI still responding on :{{.UI_PORT}}"
+          exit 1
+        fi
+        true
       - task: clean-temporal
       - echo "Stopped worker and Temporal dev server."
 
