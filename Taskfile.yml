@@ -1,5 +1,6 @@
 version: "3"
 
+# Keep command noise down; demo-reset prints its own step banners.
 silent: true
 
 vars:
@@ -20,63 +21,75 @@ tasks:
     status:
       - curl -sf -o /dev/null http://localhost:{{.UI_PORT}}
     cmds:
+      - task: start-server-fresh
+
+  start-server-fresh:
+    desc: Always start Temporal and wait until the UI answers.
+    internal: true
+    cmds:
       - mkdir -p {{.DEMO_DIR}}
       - nohup temporal server start-dev --db-filename {{.DEMO_DIR}}/temporal.db --ui-port {{.UI_PORT}} --log-level warn > {{.DEMO_DIR}}/temporal.log 2>&1 &
       - |
-        for i in $(seq 1 30); do
+        echo "Waiting for Temporal UI on http://localhost:{{.UI_PORT}} ..."
+        for i in $(seq 1 60); do
           if curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
-            echo "Temporal server + Web UI started."
+            echo "TEMPORAL UP  http://localhost:{{.UI_PORT}}"
             exit 0
           fi
           sleep 0.5
         done
-        echo "Temporal failed to become ready on :{{.UI_PORT}}. Log:"
-        tail -n 50 {{.DEMO_DIR}}/temporal.log || true
+        echo "TEMPORAL FAILED to become ready on :{{.UI_PORT}}"
+        tail -n 80 {{.DEMO_DIR}}/temporal.log || true
         exit 1
 
   start-worker:
     desc: Start the Workflow/Activity worker if not already running.
     status:
-      # Match both `go run ./worker` and the compiled cache binary it leaves behind.
       - pgrep -f "(go run \./worker|go-build.*/worker$)" >/dev/null 2>&1
+    cmds:
+      - task: start-worker-fresh
+
+  start-worker-fresh:
+    desc: Always start the worker and wait until the process exists.
+    internal: true
     cmds:
       - mkdir -p {{.DEMO_DIR}}
       - nohup go run ./worker > {{.DEMO_DIR}}/worker.log 2>&1 &
       - |
-        for i in $(seq 1 20); do
+        echo "Waiting for worker process ..."
+        for i in $(seq 1 40); do
           if pgrep -f "(go run \./worker|go-build.*/worker$)" >/dev/null 2>&1; then
-            echo "Worker started."
+            echo "WORKER UP"
             exit 0
           fi
           sleep 0.5
         done
-        echo "Worker failed to start. Log:"
-        tail -n 50 {{.DEMO_DIR}}/worker.log || true
+        echo "WORKER FAILED to start"
+        tail -n 80 {{.DEMO_DIR}}/worker.log || true
         exit 1
 
   reload-worker:
     desc: Restart the worker so it runs the current workflow.go/activity.go source.
     cmds:
       - pkill -f "go run \./worker" 2>/dev/null || true
-      # Cover temp (`.../go-build.../exe/worker`) and module-cache (`.../Caches/go-build/.../worker`) paths.
       - pkill -f "go-build.*/worker$" 2>/dev/null || true
       - sleep 1
-      - task: start-worker
+      - task: start-worker-fresh
 
   clean-temporal:
     desc: Remove local Temporal dev-server state so the next start has no workflow history.
     internal: true
     cmds:
       - rm -f {{.DEMO_DIR}}/temporal.db {{.DEMO_DIR}}/temporal.db-shm {{.DEMO_DIR}}/temporal.db-wal
-      - echo "Temporal workflow history cleared."
+      - echo "Wiped {{.DEMO_DIR}}/temporal.db (empty history on next start)."
 
   stop:
     desc: Stop the worker and the local Temporal dev server.
     cmds:
+      - echo "Stopping worker + Temporal ..."
       - pkill -f "go run \./worker" 2>/dev/null || true
       - pkill -f "go-build.*/worker$" 2>/dev/null || true
       - pkill -f "temporal server start-dev" 2>/dev/null || true
-      # Wait until the UI port is actually down so start-server does not skip as "already up".
       - |
         for i in $(seq 1 30); do
           if curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
@@ -87,72 +100,87 @@ tasks:
           fi
         done
         if curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
-          echo "stop: Temporal UI still responding on :{{.UI_PORT}}"
+          echo "TEMPORAL STILL UP on :{{.UI_PORT}} after stop"
           exit 1
         fi
+        echo "TEMPORAL DOWN"
         true
       - task: clean-temporal
-      - echo "Stopped worker and Temporal dev server."
 
   restart:
-    desc: Stop the lab, wipe Temporal workflow history, and start fresh.
+    desc: Stop the lab, wipe Temporal workflow history, and start fresh (empty).
     cmds:
       - task: stop
-      - task: start
+      - task: start-server-fresh
+      - task: start-worker-fresh
+      - echo "Temporal Web is at http://localhost:{{.UI_PORT}} (empty history)"
 
   demo-reset:
     desc: >-
-      Return to a clean lab/base rehearsal baseline: unfixed app code, no
-      session artefacts, only seeded rules, wrong-success Temporal history.
+      Down → reset lab files → Temporal UP (empty) → seed wrong-success repro.
     cmds:
+      - |
+        echo ""
+        echo "=== demo-reset 1/5  DOWN ==="
+      - task: stop
+      - |
+        echo ""
+        echo "=== demo-reset 2/5  RESET lab files ==="
       - git switch lab/base
-      # Drop staged/unstaged PAY-1183 app fixes (lab/base tip must stay broken).
       - git restore --source=lab/base --staged --worktree -- workflow.go banking-client.go workflow_test.go
-      # Drop staged/unstaged rule edits; tracked seeded rules come back from tip.
       - git restore --source=lab/base --staged --worktree -- .cursor/rules/
-      # Untracked + gitignored session artefacts (02-plan/04-validation/05-review
-      # are ignored) and a fresh /create-rule file. Scoped paths only — never repo root.
       - git clean -fdx -- requests/ .cursor/rules/
       - |
         set -e
         expected_rules=$(printf '%s\n' change-scope.mdc go-conventions.mdc)
         actual_rules=$(ls -1 .cursor/rules/ | sort)
         if [ "$actual_rules" != "$expected_rules" ]; then
-          echo "demo-reset: .cursor/rules/ must contain only the two seeded rules."
-          echo "expected:"
-          echo "$expected_rules"
-          echo "actual:"
+          echo "FAIL: .cursor/rules/ must be only the two seeded rules"
           echo "$actual_rules"
-          echo "If a guard-placement rule was committed onto lab/base, remove it from the branch tip."
           exit 1
         fi
         expected_requests="requests/PAY-1183/01-spec/TASK.md"
         actual_requests=$(find requests -type f 2>/dev/null | sort | tr '\n' ' ' | sed 's/[[:space:]]*$//')
         if [ "$actual_requests" != "$expected_requests" ]; then
-          echo "demo-reset: requests/ must contain only 01-spec/TASK.md after clean."
-          echo "actual:"
+          echo "FAIL: requests/ must contain only 01-spec/TASK.md"
           find requests -type f 2>/dev/null | sort || true
           exit 1
         fi
-        # Only lab-relevant paths — facilitator notes / .DS_Store must not block reset.
         dirty=$(git status --porcelain -- \
           workflow.go banking-client.go workflow_test.go activity.go shared.go \
           .cursor/skills .cursor/rules requests \
           Taskfile.yml LAB.md AGENTS.md go.mod go.sum .gitignore || true)
         if [ -n "$dirty" ]; then
-          echo "demo-reset: lab-relevant paths not clean after restore/clean:"
+          echo "FAIL: lab-relevant paths dirty:"
           echo "$dirty"
-          echo "Commit lab infra onto lab/base, or remove leftover files, then re-run."
           exit 1
         fi
-        echo "demo-reset: tree checks OK (lab paths clean; seeded rules only; 01-spec only)."
-      - task: restart
-      - task: repro
+        echo "Lab files OK (broken app, seeded rules, 01-spec only)."
       - |
-        echo "Demo reset complete."
-        echo "  On lab/base; app code matches the unfixed branch."
-        echo "  Temporal Web: http://localhost:{{.UI_PORT}} — Workflow ID transfer-PAY-1183"
-        echo "  After plan approval: branch pay-1183, then /03-implement-change before /04-validate-change."
+        echo ""
+        echo "=== demo-reset 3/5  UP Temporal (empty history) ==="
+      - task: start-server-fresh
+      - task: start-worker-fresh
+      - |
+        set -e
+        if ! curl -sf -o /dev/null http://localhost:{{.UI_PORT}}; then
+          echo "FAIL: Temporal UI not responding"
+          exit 1
+        fi
+        # Empty namespace: no workflows yet (db was wiped before start).
+        count=$(temporal workflow count 2>/dev/null | awk '{print $NF}' || echo unknown)
+        echo "TEMPORAL UP  http://localhost:{{.UI_PORT}}"
+        echo "Workflow count: ${count} (expect 0 before seed)"
+      - |
+        echo ""
+        echo "=== demo-reset 4/5  SEED wrong-success (-25) ==="
+      - go run ./start -id=transfer-PAY-1183 -source=85-150 -target=43-812 -amount=-25 -ref=REF-2026-0806-0047
+      - |
+        echo ""
+        echo "=== demo-reset 5/5  READY ==="
+        echo "TEMPORAL UP     http://localhost:{{.UI_PORT}}"
+        echo "Wrong-success   Workflow ID transfer-PAY-1183  (Completed, Withdraw+Deposit)"
+        echo "Open that run, screenshot it, then continue the runbook."
 
   repro:
     desc: "Reproduce PAY-1183: transfer accepted with a negative amount."
