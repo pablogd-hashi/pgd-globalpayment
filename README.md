@@ -45,9 +45,19 @@ with more time on gates; see [MODULE_OUTLINE.md](MODULE_OUTLINE.md).
 task start     # local server, Web UI, worker
 task repro     # baseline bug: amount -25 completes and moves money
 task verify    # go vet ./... && go test ./...
+task slides    # serve the presentation (slides + architecture canvas) on :8080
 ```
 
-Temporal Web: http://localhost:8233
+Temporal Web: http://localhost:8233 · Presentation: http://localhost:8080
+
+## Cloud environment
+
+`.cursor/environment.json` (with `.cursor/install.sh`) provisions a ready-to-run
+Cursor Cloud environment: it installs Go modules, the Temporal CLI, `go-task`,
+and the Cursor CLI, then boots three terminals — the Temporal dev server + Web
+UI (`:8233`), the worker, and the presentation server (`:8080`). The
+`presentation/` deck and canvas are self-contained (no CDN), so the lab can be
+presented from the cloud even when it can't be run locally.
 
 `task repro` should complete Workflow ID `transfer-PAY-1183` with Withdraw and
 Deposit Activities — that wrong-success is the starting wound. After a fix,

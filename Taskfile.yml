@@ -5,6 +5,7 @@ silent: true
 
 vars:
   UI_PORT: 8233
+  SLIDES_PORT: 8080
   DEMO_DIR: .demo
 
 tasks:
@@ -195,6 +196,32 @@ tasks:
       - task: reload-worker
       - go run ./start -id=transfer-2026-0806-0082 -source=85-150 -target=43-812 -amount=250 -ref=REF-2026-0806-0082
       - 'echo "Open http://localhost:{{.UI_PORT}} -- inspect Workflow ID transfer-2026-0806-0082"'
+
+  slides:
+    desc: Serve the self-contained presentation (slides + architecture canvas).
+    cmds:
+      - |
+        echo "Presentation:  http://localhost:{{.SLIDES_PORT}}/"
+        echo "Slides:        http://localhost:{{.SLIDES_PORT}}/slides.html"
+        echo "Canvas:        http://localhost:{{.SLIDES_PORT}}/canvas.html"
+      - python3 -m http.server {{.SLIDES_PORT}} --bind 0.0.0.0 --directory presentation
+
+  start-slides:
+    desc: Start the presentation server in the background if not already up.
+    status:
+      - curl -sf -o /dev/null http://localhost:{{.SLIDES_PORT}}/slides.html
+    cmds:
+      - mkdir -p {{.DEMO_DIR}}
+      - nohup python3 -m http.server {{.SLIDES_PORT}} --bind 0.0.0.0 --directory presentation > {{.DEMO_DIR}}/slides.log 2>&1 &
+      - |
+        for i in $(seq 1 20); do
+          if curl -sf -o /dev/null http://localhost:{{.SLIDES_PORT}}/slides.html; then
+            echo "SLIDES UP  http://localhost:{{.SLIDES_PORT}}/"
+            exit 0
+          fi
+          sleep 0.3
+        done
+        echo "SLIDES FAILED to start"; exit 1
 
   verify:
     desc: Run the focused automated tests that prove the business behavior.

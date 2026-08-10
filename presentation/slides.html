@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pgd-globalpayment — Agentic SDLC Lab</title>
+<style>
+  :root{
+    --bg:#0b1020; --bg2:#131a30; --card:#182142; --ink:#e8ecfb; --muted:#9aa6cf;
+    --accent:#6ea8fe; --accent2:#7ef0c0; --warn:#ffb454; --bad:#ff6b6b; --good:#4ade80;
+    --line:#2a3765; --code:#0e1530;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:radial-gradient(1200px 700px at 80% -10%, #1a2450 0%, var(--bg) 55%) fixed;
+    color:var(--ink); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow:hidden;
+  }
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:5vh 6vw}
+  .slide{display:none;width:min(1100px,92vw);max-height:88vh;overflow:auto}
+  .slide.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  h1{font-size:clamp(30px,5vw,58px);line-height:1.05;margin:0 0 .3em;letter-spacing:-.02em}
+  h2{font-size:clamp(24px,3.4vw,40px);margin:0 0 .5em;letter-spacing:-.01em}
+  .kicker{color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.18em;font-size:13px;margin-bottom:14px}
+  p{color:var(--ink);font-size:clamp(16px,1.7vw,22px);max-width:56ch}
+  .muted{color:var(--muted)}
+  ul{margin:.4em 0;padding-left:1.1em}
+  li{font-size:clamp(15px,1.6vw,21px);margin:.45em 0}
+  .grid{display:grid;gap:16px}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  .card{background:linear-gradient(180deg,var(--card),#141c3a);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+  .card h3{margin:.1em 0 .3em;font-size:19px}
+  .pill{display:inline-block;background:#1d2957;border:1px solid var(--line);color:var(--accent);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;margin:2px 4px 2px 0}
+  code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow:auto;font-size:15px;color:#dce6ff}
+  .tok-cmd{color:var(--accent2)}
+  .bad{color:var(--bad)} .good{color:var(--good)} .warn{color:var(--warn)}
+  table{border-collapse:collapse;width:100%;font-size:15px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left}
+  th{background:#1a244a;color:var(--muted);font-weight:600}
+  .flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .node{background:#16214a;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600;font-size:15px}
+  .node.guard{border-color:var(--warn);color:var(--warn);box-shadow:0 0 0 2px rgba(255,180,84,.15)}
+  .node.act{border-color:var(--accent);color:var(--accent)}
+  .arrow{color:var(--muted);font-size:20px}
+  footer{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;
+    padding:12px 22px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);background:rgba(9,13,28,.6);backdrop-filter:blur(6px)}
+  .dots{display:flex;gap:7px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#2c3766;cursor:pointer}
+  .dot.on{background:var(--accent);transform:scale(1.25)}
+  .brand{font-weight:800;letter-spacing:.02em}
+  .hint{position:fixed;top:14px;right:18px;color:var(--muted);font-size:12px}
+  a{color:var(--accent2)}
+  .big{font-size:clamp(20px,2.2vw,28px)}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+<div class="hint">← / → or Space to navigate · F fullscreen</div>
+<div id="stage"></div>
+<footer>
+  <div class="brand">pgd-globalpayment · Agentic SDLC Lab</div>
+  <div class="dots" id="dots"></div>
+  <div><span id="pos">1</span> / <span id="tot">0</span></div>
+</footer>
+
+<template id="deck">
+  <section class="slide">
+    <div class="kicker">Teaching lab · payments · Temporal</div>
+    <h1>From an incomplete ticket<br/>to a <span style="color:var(--accent2)">verified, reviewable</span> change</h1>
+    <p class="big muted">An agentic SDLC lab. Skills, rules, and committed artefacts are the curriculum. The payments app just makes side effects observable.</p>
+    <div style="margin-top:18px">
+      <span class="pill">Cursor Agent</span><span class="pill">Go + Temporal</span><span class="pill">Human gates</span><span class="pill">PAY-1183</span>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The problem</div>
+    <h2>Agents in an unfamiliar codebase are hard to trust</h2>
+    <div class="grid cols-2">
+      <div class="card"><h3>The cost</h3><p class="muted">When a change is hard to check, engineers revert to doing the work themselves. Rebuilding context every session compounds the hesitation.</p></div>
+      <div class="card"><h3>The approach</h3><p class="muted">Specification-driven phases with a <b>human approval gate</b> between each. The agent explores and implements inside an approved boundary; the human owns what "done" means.</p></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The host application</div>
+    <h2>A Temporal money-transfer workflow</h2>
+    <p class="muted">A Workflow withdraws from one account and deposits into another. Temporal is the runtime that makes side effects observable — not the subject of the lab.</p>
+    <div class="flow">
+      <span class="node">start/main.go</span><span class="arrow">→</span>
+      <span class="node">Temporal Server</span><span class="arrow">→</span>
+      <span class="node">Worker</span><span class="arrow">→</span>
+      <span class="node act">Withdraw</span><span class="arrow">→</span>
+      <span class="node act">Deposit</span><span class="arrow">→</span>
+      <span class="node">Mock Bank</span>
+    </div>
+    <p class="muted" style="margin-top:14px">Temporal Web shows whether money-moving Activities actually ran: <a href="http://localhost:8233">http://localhost:8233</a></p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The wound · PAY-1183</div>
+    <h2>Transfers with amount ≤ 0 <span class="bad">still move money</span></h2>
+    <pre><span class="muted"># Reproduce the bug</span>
+<span class="tok-cmd">task repro</span>   <span class="muted"># starts transfer-PAY-1183 with amount -25</span>
+
+<span class="muted"># Result today:</span>
+Workflow transfer-PAY-1183  <span class="bad">Completed</span>  (Withdraw + Deposit ran)</pre>
+    <p class="muted">A <b>Completed</b> workflow is not proof the forbidden side effect stayed off. That wrong-success is the starting wound.</p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The method</div>
+    <h2>Six phases, each with a human gate</h2>
+    <table>
+      <tr><th>Phase</th><th>Skill</th><th>Artefact</th><th>Reviewer question</th></tr>
+      <tr><td>01 spec</td><td><i>human</i></td><td>TASK.md</td><td>What does "done" mean, checkably?</td></tr>
+      <tr><td>02 plan</td><td>/spec-to-plan</td><td>plan.md</td><td>Where should the change live — and why not elsewhere?</td></tr>
+      <tr><td>03 implement</td><td>/implement-change</td><td>the diff</td><td>Does it match the plan and nothing more?</td></tr>
+      <tr><td>04 validate</td><td>/validate-change</td><td>report.md</td><td>Evidence for each acceptance criterion?</td></tr>
+      <tr><td>05 review</td><td>/prepare-review</td><td>pr.md</td><td>Can a reviewer judge it without redoing the work?</td></tr>
+      <tr><td>06 persist</td><td>/create-rule</td><td>.cursor/rules/*.mdc</td><td>Will the next session inherit this decision?</td></tr>
+    </table>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The key decision</div>
+    <h2>Where does the guard belong?</h2>
+    <div class="flow">
+      <span class="node">start/main.go<br/><span class="muted" style="font-size:12px">bypassable</span></span><span class="arrow">→</span>
+      <span class="node guard">Workflow<br/><span style="font-size:12px">reject amount ≤ 0 here</span></span><span class="arrow">→</span>
+      <span class="node act">Withdraw</span><span class="arrow">→</span>
+      <span class="node act">Deposit</span>
+    </div>
+    <div class="grid cols-3" style="margin-top:18px">
+      <div class="card"><h3 class="good">Workflow ✓</h3><p class="muted">Deterministic check before the first <code>ExecuteActivity</code>. Stops money movement from ever being scheduled.</p></div>
+      <div class="card"><h3 class="bad">Activity ✗</h3><p class="muted">Once scheduled it is in history; an Activity cannot prevent its own execution.</p></div>
+      <div class="card"><h3 class="bad">Starter ✗</h3><p class="muted">Other clients can bypass <code>start/main.go</code>; no Temporal audit trail.</p></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Evidence, not vibes</div>
+    <h2>Validate the fix against runtime history</h2>
+    <div class="grid cols-2">
+      <div class="card"><h3>Automated</h3>
+        <pre><span class="tok-cmd">task verify</span>
+<span class="good">PASS</span> Test_SuccessfulTransfer
+<span class="good">PASS</span> Test_InvalidAmountRejected
+<span class="good">PASS</span> Test_DepositFailedWorkflow</pre></div>
+      <div class="card"><h3>Runtime</h3>
+        <pre><span class="tok-cmd">task repro</span>  <span class="muted"># amount -25</span>
+Workflow <span class="good">rejected</span>
+Activities run: <span class="good">0</span>
+<span class="tok-cmd">task transfer</span> <span class="muted"># still works</span></pre></div>
+    </div>
+    <p class="muted">Green unit tests + a still-Completed Temporal run usually means a stale worker → <code>task reload-worker</code>.</p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Persist &amp; reuse</div>
+    <h2>Turn the decision into an inherited rule</h2>
+    <p class="muted">Extract the recurring placement decision into a glob-scoped <code>.cursor/rules/*.mdc</code> attached to <code>workflow.go</code> / <code>activity.go</code>. Then, in a <b>new</b> chat, ask a near-transfer question:</p>
+    <pre>Transfers where source and target are the same account should also be
+rejected before money moves. <span class="muted">Where does that check belong?</span></pre>
+    <p class="muted">Success = the session retrieves and applies the committed rule <b>without</b> re-running <code>/spec-to-plan</code>.</p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Run it anywhere</div>
+    <h2>The environment</h2>
+    <div class="grid cols-2">
+      <div class="card"><h3>Local / Cloud</h3>
+        <pre><span class="tok-cmd">task start</span>    <span class="muted"># Temporal + Web UI + worker</span>
+<span class="tok-cmd">task repro</span>    <span class="muted"># the wound</span>
+<span class="tok-cmd">task verify</span>   <span class="muted"># vet + tests</span>
+<span class="tok-cmd">task slides</span>   <span class="muted"># this deck + canvas</span></pre></div>
+      <div class="card"><h3>Endpoints</h3>
+        <p>Temporal Web → <a href="http://localhost:8233">:8233</a></p>
+        <p>Slides → <a href="http://localhost:8080/slides.html">:8080/slides.html</a></p>
+        <p>Canvas → <a href="http://localhost:8080/canvas.html">:8080/canvas.html</a></p>
+        <p class="muted">Prebuilt via <code>.cursor/environment.json</code> — Go, Task, Temporal CLI, and Cursor CLI ready on boot.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide center">
+    <div class="kicker center">Takeaway</div>
+    <h1>Ship the loop,<br/>not just the fix.</h1>
+    <p class="big muted" style="margin:0 auto">Spec → Plan → Implement → Validate → Review → Persist.<br/>Human gates make agent output cheap to trust.</p>
+  </section>
+</template>
+
+<script>
+  const tpl = document.getElementById('deck');
+  const stage = document.getElementById('stage');
+  const slides = Array.from(tpl.content.querySelectorAll('.slide')).map(n=>n.cloneNode(true));
+  slides.forEach(s=>stage.appendChild(s));
+  const dots = document.getElementById('dots');
+  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot';d.onclick=()=>go(i);dots.appendChild(d);});
+  document.getElementById('tot').textContent = slides.length;
+  let i = 0;
+  function go(n){
+    i = Math.max(0, Math.min(slides.length-1, n));
+    slides.forEach((s,k)=>s.classList.toggle('active', k===i));
+    Array.from(dots.children).forEach((d,k)=>d.classList.toggle('on', k===i));
+    document.getElementById('pos').textContent = i+1;
+    location.hash = i+1;
+  }
+  function next(){go(i+1)} function prev(){go(i-1)}
+  addEventListener('keydown', e=>{
+    if(['ArrowRight','ArrowDown',' ','PageDown'].includes(e.key)){e.preventDefault();next();}
+    else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();prev();}
+    else if(e.key==='Home'){go(0)} else if(e.key==='End'){go(slides.length-1)}
+    else if(e.key.toLowerCase()==='f'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+  });
+  let sx=null; addEventListener('touchstart',e=>sx=e.touches[0].clientX,{passive:true});
+  addEventListener('touchend',e=>{if(sx===null)return;const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50){dx<0?next():prev()}sx=null;});
+  go(parseInt(location.hash.slice(1))-1 || 0);
+</script>
+</body>
+</html>
