@@ -28,7 +28,8 @@ tasks:
   start-worker:
     desc: Start the Workflow/Activity worker if not already running.
     status:
-      - pgrep -f "go run \./worker" >/dev/null 2>&1
+      # Match both `go run ./worker` and the compiled cache binary it leaves behind.
+      - pgrep -f "(go run \./worker|go-build.*/worker$)" >/dev/null 2>&1
     cmds:
       - mkdir -p {{.DEMO_DIR}}
       - nohup go run ./worker > {{.DEMO_DIR}}/worker.log 2>&1 &
@@ -39,7 +40,8 @@ tasks:
     desc: Restart the worker so it runs the current workflow.go/activity.go source.
     cmds:
       - pkill -f "go run \./worker" 2>/dev/null || true
-      - pkill -f "go-build.*/exe/worker$" 2>/dev/null || true
+      # Cover temp (`.../go-build.../exe/worker`) and module-cache (`.../Caches/go-build/.../worker`) paths.
+      - pkill -f "go-build.*/worker$" 2>/dev/null || true
       - sleep 1
       - task: start-worker
 
@@ -54,7 +56,7 @@ tasks:
     desc: Stop the worker and the local Temporal dev server.
     cmds:
       - pkill -f "go run \./worker" 2>/dev/null || true
-      - pkill -f "go-build.*/exe/worker$" 2>/dev/null || true
+      - pkill -f "go-build.*/worker$" 2>/dev/null || true
       - pkill -f "temporal server start-dev" 2>/dev/null || true
       - task: clean-temporal
       - echo "Stopped worker and Temporal dev server."
@@ -64,6 +66,55 @@ tasks:
     cmds:
       - task: stop
       - task: start
+
+  demo-reset:
+    desc: >-
+      Return to a clean lab/base rehearsal baseline: unfixed app code, no
+      session artefacts, only seeded rules, wrong-success Temporal history.
+    cmds:
+      - git switch lab/base
+      # Drop staged/unstaged PAY-1183 app fixes (lab/base tip must stay broken).
+      - git restore --source=lab/base --staged --worktree -- workflow.go banking-client.go workflow_test.go
+      # Drop staged/unstaged rule edits; tracked seeded rules come back from tip.
+      - git restore --source=lab/base --staged --worktree -- .cursor/rules/
+      # Untracked + gitignored session artefacts (02-plan/04-validation/05-review
+      # are ignored) and a fresh /create-rule file. Scoped paths only — never repo root.
+      - git clean -fdx -- requests/ .cursor/rules/
+      - |
+        set -e
+        expected_rules=$(printf '%s\n' change-scope.mdc go-conventions.mdc)
+        actual_rules=$(ls -1 .cursor/rules/ | sort)
+        if [ "$actual_rules" != "$expected_rules" ]; then
+          echo "demo-reset: .cursor/rules/ must contain only the two seeded rules."
+          echo "expected:"
+          echo "$expected_rules"
+          echo "actual:"
+          echo "$actual_rules"
+          echo "If a guard-placement rule was committed onto lab/base, remove it from the branch tip."
+          exit 1
+        fi
+        expected_requests="requests/PAY-1183/01-spec/TASK.md"
+        actual_requests=$(find requests -type f 2>/dev/null | sort | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+        if [ "$actual_requests" != "$expected_requests" ]; then
+          echo "demo-reset: requests/ must contain only 01-spec/TASK.md after clean."
+          echo "actual:"
+          find requests -type f 2>/dev/null | sort || true
+          exit 1
+        fi
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "demo-reset: working tree not clean after restore/clean:"
+          git status --porcelain
+          echo "Commit lab infra onto lab/base, or remove leftover files, then re-run."
+          exit 1
+        fi
+        echo "demo-reset: tree checks OK (porcelain empty; seeded rules only; 01-spec only)."
+      - task: restart
+      - task: repro
+      - |
+        echo "Demo reset complete."
+        echo "  On lab/base; app code matches the unfixed branch."
+        echo "  Temporal Web: http://localhost:{{.UI_PORT}} — Workflow ID transfer-PAY-1183"
+        echo "  After plan approval: branch pay-1183, then /03-implement-change before /04-validate-change."
 
   repro:
     desc: "Reproduce PAY-1183: transfer accepted with a negative amount."

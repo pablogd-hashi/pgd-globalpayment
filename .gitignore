@@ -20,5 +20,11 @@
 # Local demo environment state (Temporal dev server db, logs, worker pid)
 .demo/
 
-# Live session plan — produced during the lab, not committed
-PAY-1183-plan.md
+# Live session artefacts under requests/ — produced during the lab, not committed
+requests/**/02-plan/
+requests/**/04-validation/
+requests/**/05-review/
+
+# Facilitator prep — local only, not committed
+MODULE_OUTLINE.md
+RUNBOOK.md
