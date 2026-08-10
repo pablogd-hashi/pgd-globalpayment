@@ -134,13 +134,18 @@ tasks:
           find requests -type f 2>/dev/null | sort || true
           exit 1
         fi
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "demo-reset: working tree not clean after restore/clean:"
-          git status --porcelain
+        # Only lab-relevant paths — facilitator notes / .DS_Store must not block reset.
+        dirty=$(git status --porcelain -- \
+          workflow.go banking-client.go workflow_test.go activity.go shared.go \
+          .cursor/skills .cursor/rules requests \
+          Taskfile.yml LAB.md AGENTS.md go.mod go.sum .gitignore || true)
+        if [ -n "$dirty" ]; then
+          echo "demo-reset: lab-relevant paths not clean after restore/clean:"
+          echo "$dirty"
           echo "Commit lab infra onto lab/base, or remove leftover files, then re-run."
           exit 1
         fi
-        echo "demo-reset: tree checks OK (porcelain empty; seeded rules only; 01-spec only)."
+        echo "demo-reset: tree checks OK (lab paths clean; seeded rules only; 01-spec only)."
       - task: restart
       - task: repro
       - |
