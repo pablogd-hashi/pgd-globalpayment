@@ -183,7 +183,8 @@ inheritance gate, not a silent success.
 | Workshop block ([MODULE_OUTLINE.md](MODULE_OUTLINE.md) §6) | Lab step |
 | --- | --- |
 | Spec from the report | §1 |
-| `/spec-to-plan` + development-entry gate | §2 |
+| `/spec-to-plan` | §2 |
+| Development-entry gate | §2 gate |
 | `/implement-change` | §3 |
 | `/validate-change` + acceptance gate | §4 |
 | `/prepare-review` | §5 |

@@ -24,8 +24,8 @@ runtime that shows whether money-moving work actually ran.
 ## Phase model
 
 Ticket work lives under `requests/<ticket>/`. Skills under `.cursor/skills/`
-are numbered to match those phases. Each phase produces a committed artefact a
-human approves before the next begins.
+match the phase names. Each phase produces a committed artefact a human
+approves before the next begins.
 
 | Phase | Folder / skill | Artefact | Depth |
 | --- | --- | --- | --- |

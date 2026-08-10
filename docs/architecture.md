@@ -21,10 +21,10 @@ the evidence is enough to accept the change.
 
 ## Phase model
 
-Ticket work lives under `requests/<ticket>/`. Skills are numbered to match the
-folders. This lab goes deep on plan, validation, and (when the decision would
-recur) convention persistence. Spec, implement, and review are present but
-thinner.
+Ticket work lives under `requests/<ticket>/`. Skills under `.cursor/skills/`
+match the phase names. This lab goes deep on plan, validation, and (when the
+decision would recur) convention persistence. Spec, implement, and review are
+present but thinner.
 
 | Phase | Folder / skill | Artefact | Depth |
 | --- | --- | --- | --- |
