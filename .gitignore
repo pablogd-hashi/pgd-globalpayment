@@ -14,5 +14,21 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# IDE dirs
+# IDE / OS junk
 .idea/
+.DS_Store
+
+# Local demo environment state (Temporal dev server db, logs, worker pid)
+.demo/
+
+# Live session artefacts under requests/ — produced during the lab, not committed
+requests/**/02-plan/
+requests/**/04-validation/
+requests/**/05-review/
+
+# Facilitator prep — local only, not committed
+MODULE_OUTLINE.md
+RUNBOOK.md
+slide-outline.md
+deck_work/
+deck.html

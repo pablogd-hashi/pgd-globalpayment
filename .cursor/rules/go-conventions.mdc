@@ -1,0 +1,13 @@
+---
+description: Go domain-error and snippet-marker conventions in this repo
+globs:
+  - "*.go"
+---
+
+Domain errors are small struct types with an `Error()` method, matching the
+existing banking errors such as `InsufficientFundsError` and
+`InvalidAccountError` in `banking-client.go`. Prefer that shape over bare
+`errors.New` when introducing a typed failure callers may need to recognise.
+
+Preserve `@@@SNIPSTART` / `@@@SNIPEND` markers. They bound excerpts for docs
+and templates; do not remove, rename, or wrap them casually when editing.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 
 	"go.temporal.io/sdk/client"
@@ -11,6 +12,15 @@ import (
 
 // @@@SNIPSTART money-transfer-project-template-go-start-workflow
 func main() {
+	// Flags let the demo start the same Workflow with different inputs
+	// (e.g. `task repro`, `task transfer`) without editing code.
+	workflowID := flag.String("id", "pay-invoice-701", "Workflow ID")
+	sourceAccount := flag.String("source", "85-150", "Source account number")
+	targetAccount := flag.String("target", "43-812", "Target account number")
+	amount := flag.Int("amount", 250, "Transfer amount")
+	referenceID := flag.String("ref", "12345", "Reference ID")
+	flag.Parse()
+
 	// Create the client object just once per process
 	c, err := client.Dial(client.Options{})
 
@@ -21,14 +31,14 @@ func main() {
 	defer c.Close()
 
 	input := app.PaymentDetails{
-		SourceAccount: "85-150",
-		TargetAccount: "43-812",
-		Amount:        250,
-		ReferenceID:   "12345",
+		SourceAccount: *sourceAccount,
+		TargetAccount: *targetAccount,
+		Amount:        *amount,
+		ReferenceID:   *referenceID,
 	}
 
 	options := client.StartWorkflowOptions{
-		ID:        "pay-invoice-701",
+		ID:        *workflowID,
 		TaskQueue: app.MoneyTransferTaskQueueName,
 	}
 
@@ -46,7 +56,8 @@ func main() {
 	err = we.Get(context.Background(), &result)
 
 	if err != nil {
-		log.Fatalln("Unable to get Workflow result:", err)
+		log.Println("Workflow returned an error:", err)
+		return
 	}
 
 	log.Println(result)
