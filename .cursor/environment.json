@@ -1,0 +1,17 @@
+{
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "temporal-server",
+      "command": "export PATH=\"$HOME/.local/bin:$HOME/go/bin:$HOME/.temporalio/bin:$PATH\"; mkdir -p .demo; temporal server start-dev --db-filename .demo/temporal.db --ui-port 8233 --log-level warn"
+    },
+    {
+      "name": "worker",
+      "command": "export PATH=\"$HOME/.local/bin:$HOME/go/bin:$HOME/.temporalio/bin:$PATH\"; until curl -sf -o /dev/null http://localhost:8233; do sleep 1; done; go run ./worker"
+    },
+    {
+      "name": "slides",
+      "command": "python3 -m http.server 8080 --bind 0.0.0.0 --directory presentation"
+    }
+  ]
+}

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pgd-globalpayment — Architecture Canvas</title>
+<style>
+  :root{
+    --bg:#0b1020; --ink:#e8ecfb; --muted:#9aa6cf; --accent:#6ea8fe; --accent2:#7ef0c0;
+    --warn:#ffb454; --bad:#ff6b6b; --good:#4ade80; --line:#2a3765;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+  #top{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;gap:14px;
+    padding:0 18px;border-bottom:1px solid var(--line);background:rgba(9,13,28,.7);backdrop-filter:blur(8px);z-index:5}
+  .brand{font-weight:800}
+  .seg{display:flex;background:#141c3a;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{background:transparent;color:var(--muted);border:0;padding:8px 14px;font-weight:600;cursor:pointer}
+  .seg button.on{background:#22305f;color:var(--ink)}
+  .spacer{flex:1}
+  .hint{color:var(--muted);font-size:12px}
+  #wrap{position:absolute;inset:56px 0 0 0;cursor:grab}
+  #wrap.drag{cursor:grabbing}
+  svg{width:100%;height:100%;display:block;touch-action:none}
+  .edge{stroke:#3a4a86;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+  .edge.warn{stroke:var(--warn);stroke-dasharray:6 5}
+  .edge.bad{stroke:var(--bad)}
+  .lbl{fill:var(--muted);font-size:12px}
+  .node rect{fill:#16214a;stroke:var(--line);stroke-width:1.5;rx:14;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+  .node.act rect{stroke:var(--accent)}
+  .node.guard rect{stroke:var(--warn);stroke-width:2.5}
+  .node.ext rect{fill:#101733;stroke:#33406f;stroke-dasharray:4 4}
+  .node .title{fill:var(--ink);font-weight:700;font-size:15px}
+  .node .sub{fill:var(--muted);font-size:12px}
+  .node{cursor:pointer}
+  .node:hover rect{stroke:var(--accent2)}
+  #panel{position:fixed;right:16px;bottom:16px;width:min(340px,44vw);background:#131a30;border:1px solid var(--line);
+    border-radius:14px;padding:14px 16px;z-index:6;display:none}
+  #panel h3{margin:.1em 0 .35em;font-size:16px}
+  #panel p{margin:.3em 0;color:var(--muted);font-size:13px}
+  #panel code{background:#0e1530;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+  .tag{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:700;margin-bottom:6px}
+  .tag.good{background:rgba(74,222,128,.15);color:var(--good)}
+  .tag.bad{background:rgba(255,107,107,.15);color:var(--bad)}
+  .tag.warn{background:rgba(255,180,84,.15);color:var(--warn)}
+  .tag.info{background:rgba(110,168,254,.15);color:var(--accent)}
+  #reset{background:#141c3a;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="top">
+  <span class="brand">Architecture Canvas</span>
+  <div class="seg" id="seg">
+    <button data-view="system" class="on">System flow</button>
+    <button data-view="phases">SDLC phases</button>
+  </div>
+  <span class="spacer"></span>
+  <span class="hint">drag to pan · scroll / +− to zoom · click a node</span>
+  <button id="reset">Reset view</button>
+</div>
+<div id="wrap">
+  <svg id="svg">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#3a4a86"></path>
+      </marker>
+    </defs>
+    <g id="scene"></g>
+  </svg>
+</div>
+<div id="panel"></div>
+
+<script>
+const SYSTEM = {
+  nodes:[
+    {id:'start', x:40,  y:180, w:190,h:74, cls:'', title:'start/main.go', sub:'CLI starter · flags',
+      info:{tag:'info',t:'Workflow starter',d:'Kicks off a MoneyTransfer run with source/target/amount. <b>Not</b> the place to guard: other clients can bypass it and it leaves no Temporal audit trail.'}},
+    {id:'srv',   x:290, y:180, w:190,h:74, cls:'', title:'Temporal Server', sub:'dev · :7233 / UI :8233',
+      info:{tag:'info',t:'Temporal Server',d:'Orchestrates workflow state, retries and history. Web UI on <code>:8233</code> makes side effects observable.'}},
+    {id:'wk',    x:540, y:180, w:190,h:74, cls:'', title:'Worker', sub:'worker/main.go',
+      info:{tag:'info',t:'Worker',d:'Polls <code>TRANSFER_MONEY_TASK_QUEUE</code> and executes Workflow + Activity code. Restart with <code>task reload-worker</code> after edits.'}},
+    {id:'wf',    x:540, y:40,  w:230,h:82, cls:'guard', title:'MoneyTransfer (Workflow)', sub:'workflow.go · GUARD HERE',
+      info:{tag:'warn',t:'Guard belongs here',d:'A deterministic <code>amount &le; 0</code> check before the first <code>workflow.ExecuteActivity</code> stops money movement from ever being scheduled.'}},
+    {id:'wd',    x:840, y:70,  w:180,h:70, cls:'act', title:'Withdraw', sub:'activity.go',
+      info:{tag:'bad',t:'Activity — too late',d:'Once scheduled, the Activity is recorded in history. It cannot prevent its own execution, so a guard here does not satisfy PAY-1183.'}},
+    {id:'dp',    x:840, y:170, w:180,h:70, cls:'act', title:'Deposit', sub:'activity.go',
+      info:{tag:'bad',t:'Activity — too late',d:'Same as Withdraw: the side effect has already started by the time this code runs.'}},
+    {id:'rf',    x:840, y:270, w:180,h:70, cls:'act', title:'Refund', sub:'compensation',
+      info:{tag:'info',t:'Compensation',d:'Runs to put money back if Deposit fails after a successful Withdraw.'}},
+    {id:'bank',  x:1080,y:170, w:180,h:70, cls:'ext', title:'Mock Bank', sub:'banking-client.go',
+      info:{tag:'info',t:'Mock banking client',d:'Simulated bank. Makes no real network calls; returns pseudo transaction IDs.'}},
+  ],
+  edges:[
+    {from:'start',to:'srv'}, {from:'srv',to:'wk'}, {from:'wk',to:'wf'},
+    {from:'wf',to:'wd',cls:'warn'}, {from:'wf',to:'dp',cls:'warn'},
+    {from:'wd',to:'bank'}, {from:'dp',to:'bank'}, {from:'rf',to:'bank'},
+  ],
+};
+
+const PHASES = {
+  nodes:[
+    {id:'p1',x:40, y:60, w:210,h:80,cls:'',title:'01 · Spec',sub:'TASK.md (human)',
+      info:{tag:'info',t:'Spec',d:'Requirement + checkable acceptance criteria. Gate: is "done" checkable before any exploration?'}},
+    {id:'p2',x:300,y:60, w:210,h:80,cls:'guard',title:'02 · Plan',sub:'/spec-to-plan',
+      info:{tag:'warn',t:'Plan (deep)',d:'Where should the change live and why not elsewhere? Gate: approve placement before code.'}},
+    {id:'p3',x:560,y:60, w:210,h:80,cls:'act',title:'03 · Implement',sub:'/implement-change',
+      info:{tag:'info',t:'Implement',d:'Smallest change matching the approved plan. Gate: the diff matches the plan and nothing more.'}},
+    {id:'p4',x:560,y:200,w:210,h:80,cls:'guard',title:'04 · Validate',sub:'/validate-change',
+      info:{tag:'good',t:'Validate (deep)',d:'Map each acceptance criterion to evidence: tests, <code>task repro</code>, Temporal history. Gate: side effects never started for the invalid amount.'}},
+    {id:'p5',x:300,y:200,w:210,h:80,cls:'',title:'05 · Review',sub:'/prepare-review',
+      info:{tag:'info',t:'Review',d:'A reviewer can judge without redoing the investigation.'}},
+    {id:'p6',x:40, y:200,w:210,h:80,cls:'act',title:'06 · Persist',sub:'/create-rule',
+      info:{tag:'good',t:'Persist the decision',d:'Extract a glob-scoped <code>.cursor/rules/*.mdc</code> so the next session inherits the boundary — only if it would recur.'}},
+    {id:'p7',x:300,y:330,w:210,h:80,cls:'ext',title:'07 · Reuse',sub:'new chat',
+      info:{tag:'info',t:'Reuse / inheritance',d:'A near-transfer question in a fresh chat should apply the committed rule without re-planning.'}},
+  ],
+  edges:[
+    {from:'p1',to:'p2'},{from:'p2',to:'p3'},{from:'p3',to:'p4'},
+    {from:'p4',to:'p5'},{from:'p5',to:'p6'},{from:'p6',to:'p7',cls:'warn'},
+  ],
+};
+
+const svg = document.getElementById('svg');
+const scene = document.getElementById('scene');
+const panel = document.getElementById('panel');
+const NS='http://www.w3.org/2000/svg';
+let view='system', tx=0, ty=0, scale=1;
+
+function center(n){return {x:n.x+n.w/2, y:n.y+n.h/2};}
+function anchor(a,b){
+  // pick edge point on a toward b
+  const ca=center(a), cb=center(b);
+  const dx=cb.x-ca.x, dy=cb.y-ca.y;
+  const hx=a.w/2, hy=a.h/2;
+  const sx = dx===0?Infinity:hx/Math.abs(dx);
+  const sy = dy===0?Infinity:hy/Math.abs(dy);
+  const s=Math.min(sx,sy);
+  return {x:ca.x+dx*s, y:ca.y+dy*s};
+}
+
+function draw(){
+  scene.innerHTML='';
+  const data = view==='system'?SYSTEM:PHASES;
+  const map = Object.fromEntries(data.nodes.map(n=>[n.id,n]));
+  data.edges.forEach(e=>{
+    const a=map[e.from], b=map[e.to];
+    const p1=anchor(a,b), p2=anchor(b,a);
+    const path=document.createElementNS(NS,'path');
+    const mx=(p1.x+p2.x)/2;
+    path.setAttribute('d',`M ${p1.x} ${p1.y} C ${mx} ${p1.y}, ${mx} ${p2.y}, ${p2.x} ${p2.y}`);
+    path.setAttribute('class','edge'+(e.cls?' '+e.cls:''));
+    scene.appendChild(path);
+  });
+  data.nodes.forEach(n=>{
+    const g=document.createElementNS(NS,'g');
+    g.setAttribute('class','node'+(n.cls?' '+n.cls:''));
+    g.setAttribute('transform',`translate(${n.x},${n.y})`);
+    const r=document.createElementNS(NS,'rect');
+    r.setAttribute('width',n.w);r.setAttribute('height',n.h);r.setAttribute('rx',14);
+    g.appendChild(r);
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('class','title');t.setAttribute('x',16);t.setAttribute('y',30);
+    t.textContent=n.title; g.appendChild(t);
+    const s=document.createElementNS(NS,'text');
+    s.setAttribute('class','sub');s.setAttribute('x',16);s.setAttribute('y',52);
+    s.textContent=n.sub; g.appendChild(s);
+    g.addEventListener('click',ev=>{ev.stopPropagation();showPanel(n);});
+    scene.appendChild(g);
+  });
+  fit();
+}
+
+function showPanel(n){
+  panel.style.display='block';
+  panel.innerHTML=`<span class="tag ${n.info.tag}">${n.info.t}</span><h3>${n.title}</h3><p>${n.info.d}</p>`;
+}
+document.getElementById('wrap').addEventListener('click',()=>panel.style.display='none');
+
+function apply(){scene.setAttribute('transform',`translate(${tx},${ty}) scale(${scale})`);}
+function fit(){
+  const data = view==='system'?SYSTEM:PHASES;
+  let maxX=0,maxY=0,minX=1e9,minY=1e9;
+  data.nodes.forEach(n=>{minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+n.w);maxY=Math.max(maxY,n.y+n.h);});
+  const pad=60, cw=svg.clientWidth, ch=svg.clientHeight;
+  const w=maxX-minX+pad*2, h=maxY-minY+pad*2;
+  scale=Math.min(cw/w, ch/h, 1.4);
+  tx = (cw-(w)*scale)/2 - (minX-pad)*scale;
+  ty = (ch-(h)*scale)/2 - (minY-pad)*scale;
+  apply();
+}
+
+// pan
+const wrap=document.getElementById('wrap');
+let dragging=false, lx=0, ly=0;
+wrap.addEventListener('pointerdown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;wrap.classList.add('drag');wrap.setPointerCapture(e.pointerId);});
+wrap.addEventListener('pointermove',e=>{if(!dragging)return;tx+=e.clientX-lx;ty+=e.clientY-ly;lx=e.clientX;ly=e.clientY;apply();});
+wrap.addEventListener('pointerup',e=>{dragging=false;wrap.classList.remove('drag');});
+wrap.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY<0?1.1:1/1.1;const r=svg.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;tx=mx-(mx-tx)*f;ty=my-(my-ty)*f;scale*=f;apply();},{passive:false});
+addEventListener('keydown',e=>{if(e.key==='+'||e.key==='='){scale*=1.1;apply();}if(e.key==='-'){scale/=1.1;apply();}});
+document.getElementById('reset').addEventListener('click',fit);
+document.getElementById('seg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  view=b.dataset.view;
+  Array.from(e.currentTarget.children).forEach(x=>x.classList.toggle('on',x===b));
+  panel.style.display='none'; draw();
+});
+addEventListener('resize',fit);
+draw();
+</script>
+</body>
+</html>
