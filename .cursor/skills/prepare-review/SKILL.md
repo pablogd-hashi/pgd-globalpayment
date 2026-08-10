@@ -1,5 +1,5 @@
 ---
-name: 05-prepare-review
+name: prepare-review
 description: >-
   Phase 05 (requests/<ticket>/05-review). Draft a reviewer-facing summary for a
   ticket from the spec and validation report. Use after validation, when
@@ -9,8 +9,15 @@ description: >-
 
 # Prepare review
 
-Do not change application code. Do not call GitHub, open a pull request, or use
-the network.
+## When to Use
+
+- After validation
+- When preparing review material
+- When the user asks for a PR write-up without creating a pull request
+
+## Instructions
+
+Do not change application code. 
 
 Read `requests/<ticket>/01-spec/TASK.md` and
 `requests/<ticket>/04-validation/report.md`. Write

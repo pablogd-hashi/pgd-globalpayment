@@ -1,50 +1,61 @@
-# Temporal Go Project Template
+# pgd-globalpayment
 
-This is a simple project for demonstrating Temporal with the Go SDK.
+A teaching lab for **agentic SDLC patterns**: how to take a ticket from an
+incomplete request to a verified, reviewable change, with human gates between
+phases. Skills, rules, and committed artefacts are the curriculum. The host
+application is only a small payments-shaped codebase so side effects are
+observable.
 
-The full 10-minute tutorial is here: https://learn.temporal.io/getting_started/go/first_program_in_go/
+You do not need to master Temporal to complete the lab. Temporal here is the
+runtime that shows whether money-moving work actually ran.
 
-## Basic instructions
+- Architecture (problem, approach, artefacts): [docs/architecture.md](docs/architecture.md)
+- Step-by-step lab (self-serve, same path as the demo): [LAB.md](LAB.md)
+- 90-minute workshop outline: [MODULE_OUTLINE.md](MODULE_OUTLINE.md)
+- Facilitator 15-minute proof cue sheet: [RUNBOOK.md](RUNBOOK.md)
 
-### Step 0: Temporal Server
+## Prerequisites
 
-Make sure [Temporal Server is running](https://docs.temporal.io/docs/server/quick-install/) first:
+- [Cursor](https://cursor.com/) (Agent chat; project skills under `.cursor/skills/`)
+- Go 1.23+ (see `go.mod`; toolchain may fetch 1.24.x)
+- [Task](https://taskfile.dev/) (`task` on your `PATH`)
+- [Temporal CLI](https://docs.temporal.io/cli) (`temporal` on your `PATH`)
+
+## Phase model
+
+Ticket work lives under `requests/<ticket>/`. Skills under `.cursor/skills/`
+are numbered to match those phases. Each phase produces a committed artefact a
+human approves before the next begins.
+
+| Phase | Folder / skill | Artefact | Depth |
+| --- | --- | --- | --- |
+| 01-spec | *(human)* | `01-spec/TASK.md` | sketch |
+| 02-plan | `/spec-to-plan` | `02-plan/plan.md` | deep |
+| 03-implement | `/implement-change` | the diff | sketch |
+| 04-validate | `/validate-change` | `04-validation/report.md` | deep |
+| 05-review | `/prepare-review` | `05-review/pr.md` | sketch |
+| 06-convention | `/create-rule` — only if it recurs | `.cursor/rules/*.mdc` | deep |
+
+Follow [LAB.md](LAB.md) end to end. The 90-minute cohort path is the same loop
+with more time on gates; see [MODULE_OUTLINE.md](MODULE_OUTLINE.md).
+
+## Quick environment check
 
 ```bash
-git clone https://github.com/temporalio/docker-compose.git
-cd  docker-compose
-docker-compose up
+task start     # local server, Web UI, worker
+task repro     # baseline bug: amount -25 completes and moves money
+task verify    # go vet ./... && go test ./...
 ```
 
-### Step 1: Clone this Repository
+Temporal Web: http://localhost:8233
 
-In another terminal instance, clone this repo and run this application.
+`task repro` should complete Workflow ID `transfer-PAY-1183` with Withdraw and
+Deposit Activities — that wrong-success is the starting wound. After a fix,
+validation must show the opposite.
 
-```bash
-git clone https://github.com/temporalio/money-transfer-project-template-go
-cd money-transfer-project-template-go
-```
+## Attribution
 
-### Step 2: Run the Workflow
-
-```bash
-go run start/main.go
-```
-
-Observe that Temporal Web reflects the workflow, but it is still in "Running" status. This is because there is no Workflow or Activity Worker yet listening to the `TRANSFER_MONEY_TASK_QUEUE` task queue to process this work.
-
-### Step 3: Run the Worker
-
-In YET ANOTHER terminal instance, run the worker. Notice that this worker hosts both Workflow and Activity functions.
-
-```bash
-go run worker/main.go
-```
-
-Now you can see the workflow run to completion. You can also see the worker polling for workflows and activities in the task queue at [http://localhost:8080/namespaces/default/task-queues/TRANSFER_MONEY_TASK_QUEUE](http://localhost:8080/namespaces/default/task-queues/TRANSFER_MONEY_TASK_QUEUE).
-
-## What Next?
-
-You can run the Workflow code a few more times with `go run start/main.go` to understand how it interacts with the Worker and Temporal Server.
-
-Please [read the tutorial](https://learn.temporal.io/getting_started/go/first_program_in_go/) for more details.
+Host application forked from
+[temporalio/money-transfer-project-template-go](https://github.com/temporalio/money-transfer-project-template-go).
+The upstream [LICENSE](LICENSE) is unchanged. Upstream docs and tutorials stay
+there; this repository is about the agentic workflow layered on top.

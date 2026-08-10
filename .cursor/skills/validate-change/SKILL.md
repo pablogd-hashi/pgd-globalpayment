@@ -1,13 +1,25 @@
 ---
-name: 04-validate-change
+name: validate-change
 description: >-
   Phase 04 (requests/<ticket>/04-validation). Prove a change is safe in this
   side-effecting Temporal codebase. Use after implementing a fix, before
   treating work as done, or when the user asks to validate, check, or confirm
   acceptance criteria from the spec.
+paths:
+  - workflow.go
+  - "**/*_test.go"
 ---
 
 # Validate change
+
+## When to Use
+
+- After implementing a fix
+- Before treating work as done
+- When the user asks to validate, check, or confirm acceptance criteria from
+  the spec
+
+## Instructions
 
 Do not change application code while verifying.
 

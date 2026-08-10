@@ -2,10 +2,10 @@
 
 ## Context
 
-You've picked up PAY-1183 in a payments codebase you don't work in daily.
-You didn't write this code. The codebase runs Temporal Workflows that move
-money between accounts. You have this repository, `task repro`, `task verify`,
-`task transfer`, and Temporal Web on http://localhost:8233.
+You've picked up PAY-1183 in a payments codebase.
+The codebase runs Temporal Workflows that move
+money between accounts. You have this repository
+and Temporal Web on http://localhost:8233.
 
 ## Requirement
 
